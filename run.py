@@ -6,19 +6,33 @@ from __future__ import annotations
 import os
 import runpy
 import sys
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
 
+def _run_script(relative: str) -> None:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    os.chdir(ROOT)
+    runpy.run_path(str(ROOT / relative), run_name="__main__")
+
+
 def main() -> None:
     job = os.getenv("JOB", "").strip()
-    if job == "skill_lesson":
-        runpy.run_path(str(ROOT / "jobs" / "skill_lesson.py"), run_name="__main__")
-    elif job == "financial_lesson":
-        runpy.run_path(str(ROOT / "jobs" / "financial" / "lesson.py"), run_name="__main__")
-    else:
-        raise SystemExit("Set JOB to: skill_lesson, financial_lesson")
+    try:
+        if job == "skill_lesson":
+            _run_script("jobs/skill_lesson.py")
+        elif job == "financial_lesson":
+            _run_script("jobs/financial/lesson.py")
+        else:
+            raise SystemExit("Set JOB to: skill_lesson, financial_lesson")
+    except SystemExit:
+        raise
+    except Exception:
+        traceback.print_exc()
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
