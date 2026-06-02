@@ -1,0 +1,52 @@
+name: Learning Hub
+
+on:
+  schedule:
+    - cron: "0 5 * * *"      # 09:00 Tbilisi — daily skill lesson
+    - cron: "0 5 * * 1"      # Mon 09:00 — financial lesson
+    - cron: "0 5 * * 3"      # Wed 09:00 — financial lesson
+    - cron: "0 5 * * 5"      # Fri 09:00 — financial lesson
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run
+        required: true
+        default: skill_lesson
+        type: choice
+        options:
+          - skill_lesson
+          - financial_lesson
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install python-telegram-bot==21.0 openai==1.54.0 pytz==2024.1
+
+      - name: Resolve job
+        id: job
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 5 * * *" ]; then
+            echo "name=skill_lesson" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=financial_lesson" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run hub job
+        env:
+          JOB: ${{ steps.job.outputs.name }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python run.py
